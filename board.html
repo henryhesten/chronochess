@@ -1,0 +1,292 @@
+<script>
+var playingAs = 2; // white,black,observe
+var chronoPoints = [2,1];
+var pieceArr = [["&#9817;","&#9816;","&#9815;","&#9814;","&#9812;","&#9813;"],
+				["&#9823;","&#9822;","&#9821;","&#9820;","&#9819;","&#9818;"]];
+var turnA = [ ///////////////
+[	[[0,0,0,0],[1,1,1,1]],	// [ colour,piece,x,y ]
+	[0,0,0,1,1] ],			// [ (rel/abs), ox,oy,nx,ny ]
+[	[[0,0,0,1],[1,1,1,1]],	// [ colour,piece,x,y ]
+	[1,1,1,5,5] ],			// [ (rel/abs), ox,oy,nx,ny ]
+[	[[1,4,0,0],[0,5,1,1]],	// [ colour,piece,x,y ]
+	[0,0,0,1,1] ]			// [ (rel/abs), ox,oy,nx,ny ]
+];
+var moveA = [ ///////////
+	[1,"e4"],
+	[0],
+	[2,"Nf4"],
+	[1,"e4"],
+	[0],
+	[2,"Nf4"]
+]
+var turn = turnA.length-1
+function clearBoard(){
+	var sqs = document.getElementsByClassName("square")
+	for( var i=0; i<sqs.length; i++ ){
+		sqs[i].innerHTML = "";
+	}
+}
+function updateBoard(){
+	clearBoard();
+	
+	var pieces;
+	if(turn < turnA.length){
+		pieces = turnA[turn][0];
+	}else{
+		pieces = turnA[turnA.length-1][0];
+	}
+	for( var i=0; i<pieces.length; i++){
+		p = pieces[i];
+		idd = String(p[2])+String(p[3]);
+		document.getElementById(idd).innerHTML = pieceArr[p[0]][p[1]];
+	}
+	
+	for(var i=0;i<8;i++){
+		for(var j=0;j<8;j++){
+			var idd = String(i)+String(j);
+			if((i+j)%2 == 0){
+				document.getElementById(idd).style.background = "linear-gradient(#ccc,#eee)";//"-webkit-gradient(linear,0 0, 0 100%, from(#fff), to(#000))";
+				document.getElementById(idd).style.boxShadow = "inset 0 0 10px rgba(0,0,0,.4)";
+			}else{
+				document.getElementById(idd).style.background = document.getElementById(idd).style.background = "linear-gradient(#fff,#eee)";
+				document.getElementById(idd).style.boxShadow = "inset 0 0 0 1px #fff";
+			}
+		}
+	}
+	
+	var movedat;
+	if(turn < turnA.length){
+		movedat = turnA[turn][1];
+	}else{
+		movedat = turnA[turnA.length-1][1];
+	}
+	var old = String(movedat[1])+String(movedat[2]);
+	var neww = String(movedat[3])+String(movedat[4]);
+	document.getElementById(old).style.background = "#cec";
+	var col = movedat[0]==0 ? "#ecc" : "#cce";
+	document.getElementById(neww).style.background = col;
+	
+}
+function drawMoves(){
+	var buffer = ["<table id='movetable' cellpadding='5px' cellspacing='0' width='100%'>"];
+	var wht = 1;
+	var ind = 0;
+	while(ind < moveA.length){
+		if(wht){
+			buffer.push("<tr width='100%'>");
+		}
+		var col;
+		switch(moveA[ind][0]){
+			case 0:
+				col = "#fff";
+				break;
+			case 1:
+				col = "#ecc";
+				break;
+			case 2:
+				col = "#cce";
+		}
+		if(ind==turn){
+			col = "#cec";
+		}
+		if(moveA[ind][0]>0){
+			buffer.push("<td class='movetd' id='mvtd"+ind+"' bgcolor="+col+" width='50%'>"+moveA[ind][1]+"</td>");
+		}else{
+			buffer.push("<td class='movetd' id='mvtd"+ind+"' bgcolor="+col+" width='50%'>---</td>");
+		}
+		if(!wht || ind == moveA.length-1){
+			buffer.push("</tr>");
+		}
+		wht = 1-wht
+		ind ++;
+	}
+	buffer.push("</table>");
+	
+	document.getElementById("moves").innerHTML = buffer.join('\n');
+	tds = document.getElementsByClassName("movetd")
+	for(var i=0; i<tds.length; i++){
+		tds[i].style.textAlign="center";
+	}
+}
+function playAs(player){
+	playingAs = player;
+	document.getElementById("moves").style.display="inline-block";
+	document.getElementById("chess_board").style.display="inline-block";
+	document.getElementById("right").style.display="inline-block";
+	document.getElementById("controls").style.display="block";
+	document.getElementById("playas").style.display="none";
+	drawMoves()
+	updateBoard()
+}
+function changeTurn(amount){
+	turn += amount;
+	if(turn<0){
+		turn=0;
+	}
+	if(turn>turnA.length){
+		turn = turnA.length;
+	}
+	
+	drawMoves()
+	updateBoard()
+}
+function setup(){
+	document.getElementById("moves").style.display="none";
+	document.getElementById("chess_board").style.display="none";
+	document.getElementById("controls").style.display="none";
+	document.getElementById("right").style.display="none";
+	
+	document.getElementById("blackPoints").innerHTML = chronoPoints[1];
+	document.getElementById("whitePoints").innerHTML = chronoPoints[0];
+	
+}
+function selected(x,y){
+	console.log(x,y);
+}
+</script>
+
+<style>
+#chronoTop{
+	margin-bottom: 580px;
+}
+#right{
+	display:inline-block;
+	width:150px;
+	height:650px;
+	background: #eee;
+	vertical-align: top;
+}
+#moves{
+	height:650px;
+	width:150px;
+	background: #eee;
+	display: inline-block;
+}
+.square {
+	color:#000;
+	//display:block;
+	font-size:60px;
+	
+	height:80px;
+	position:relative;
+	text-decoration:none;
+	text-shadow:0 1px #fff;
+	width:80px;
+}
+#chess_board {
+	border:5px solid #333;
+	display: inline-block;
+}
+#chess_board td {
+	background:#fff;
+	background:-moz-linear-gradient(top, #fff, #eee);
+	background:-webkit-gradient(linear,0 0, 0 100%, from(#fff), to(#eee));
+	box-shadow:inset 0 0 0 1px #fff;
+	-moz-box-shadow:inset 0 0 0 1px #fff;
+	-webkit-box-shadow:inset 0 0 0 1px #fff;
+	height:80px;
+	text-align:center;
+	vertical-align:middle;
+	width:80px;
+}
+#chess_board tr:nth-child(odd) td:nth-child(even),
+#chess_board tr:nth-child(even) td:nth-child(odd) {
+	background:#ccc;
+	background:-moz-linear-gradient(top, #ccc, #eee);
+	background:-webkit-gradient(linear,0 0, 0 100%, from(#ccc), to(#eee));
+	box-shadow:inset 0 0 10px rgba(0,0,0,.4);
+	-moz-box-shadow:inset 0 0 10px rgba(0,0,0,.4);
+	-webkit-box-shadow:inset 0 0 10px rgba(0,0,0,.4);
+}
+</style>
+<body onload="setup()">
+<div id="playas">Play as: <a href="#" onclick="playAs(0)">white</a> <a href="#" onclick="playAs(1)">black</a> <a href="#" onclick="playAs(2)">observe</a></div>
+<div id="moves"></div>
+<table id="chess_board" cellpadding="0" cellspacing="0">
+	<tr>
+		<td class="square" id="07" onclick="selected(0,7)"></td>
+		<td class="square" id="17" onclick="selected(1,7)"></td>
+		<td class="square" id="27" onclick="selected(2,7)"></td>
+		<td class="square" id="37" onclick="selected(3,7)"></td>
+		<td class="square" id="47" onclick="selected(4,7)"></td>
+		<td class="square" id="57" onclick="selected(5,7)"></td>
+		<td class="square" id="67" onclick="selected(6,7)"></td>
+		<td class="square" id="77" onclick="selected(7,7)"></td>
+	</tr>
+	<tr>
+		<td class="square" id="06" onclick="selected(0,6)"></td>
+		<td class="square" id="16" onclick="selected(1,6)"></td>
+		<td class="square" id="26" onclick="selected(2,6)"></td>
+		<td class="square" id="36" onclick="selected(3,6)"></td>
+		<td class="square" id="46" onclick="selected(4,6)"></td>
+		<td class="square" id="56" onclick="selected(5,6)"></td>
+		<td class="square" id="66" onclick="selected(6,6)"></td>
+		<td class="square" id="76" onclick="selected(7,6)"></td>
+	</tr>
+	<tr>
+		<td class="square" id="05" onclick="selected(0,5)"></td>
+		<td class="square" id="15" onclick="selected(1,5)"></td>
+		<td class="square" id="25" onclick="selected(2,5)"></td>
+		<td class="square" id="35" onclick="selected(3,5)"></td>
+		<td class="square" id="45" onclick="selected(4,5)"></td>
+		<td class="square" id="55" onclick="selected(5,5)"></td>
+		<td class="square" id="65" onclick="selected(6,5)"></td>
+		<td class="square" id="75" onclick="selected(7,5)"></td>
+	</tr>
+	<tr>
+		<td class="square" id="04" onclick="selected(0,4)"></td>
+		<td class="square" id="14" onclick="selected(1,4)"></td>
+		<td class="square" id="24" onclick="selected(2,4)"></td>
+		<td class="square" id="34" onclick="selected(3,4)"></td>
+		<td class="square" id="44" onclick="selected(4,4)"></td>
+		<td class="square" id="54" onclick="selected(5,4)"></td>
+		<td class="square" id="64" onclick="selected(6,4)"></td>
+		<td class="square" id="74" onclick="selected(7,4)"></td>
+	</tr>
+	<tr>
+		<td class="square" id="03" onclick="selected(0,3)"></td>
+		<td class="square" id="13" onclick="selected(1,3)"></td>
+		<td class="square" id="23" onclick="selected(2,3)"></td>
+		<td class="square" id="33" onclick="selected(3,3)"></td>
+		<td class="square" id="43" onclick="selected(4,3)"></td>
+		<td class="square" id="53" onclick="selected(5,3)"></td>
+		<td class="square" id="63" onclick="selected(6,3)"></td>
+		<td class="square" id="73" onclick="selected(7,3)"></td>
+	</tr>
+	<tr>
+		<td class="square" id="02" onclick="selected(0,2)"></td>
+		<td class="square" id="12" onclick="selected(1,2)"></td>
+		<td class="square" id="22" onclick="selected(2,2)"></td>
+		<td class="square" id="32" onclick="selected(3,2)"></td>
+		<td class="square" id="42" onclick="selected(4,2)"></td>
+		<td class="square" id="52" onclick="selected(5,2)"></td>
+		<td class="square" id="62" onclick="selected(6,2)"></td>
+		<td class="square" id="72" onclick="selected(7,2)"></td>
+	</tr>
+	<tr>
+		<td class="square" id="01" onclick="selected(0,1)"></td>
+		<td class="square" id="11" onclick="selected(1,1)"></td>
+		<td class="square" id="21" onclick="selected(2,1)"></td>
+		<td class="square" id="31" onclick="selected(3,1)"></td>
+		<td class="square" id="41" onclick="selected(4,1)"></td>
+		<td class="square" id="51" onclick="selected(5,1)"></td>
+		<td class="square" id="61" onclick="selected(6,1)"></td>
+		<td class="square" id="71" onclick="selected(7,1)"></td>
+	</tr>
+	<tr>
+		<td class="square" id="00" onclick="selected(0,0)"></td>
+		<td class="square" id="10" onclick="selected(1,0)"></td>
+		<td class="square" id="20" onclick="selected(2,0)"></td>
+		<td class="square" id="30" onclick="selected(3,0)"></td>
+		<td class="square" id="40" onclick="selected(4,0)"></td>
+		<td class="square" id="50" onclick="selected(5,0)"></td>
+		<td class="square" id="60" onclick="selected(6,0)"></td>
+		<td class="square" id="70" onclick="selected(7,0)"></td>
+	</tr>
+</table>
+<div id="right">
+<p id="chronoTop">Chrono-points: <span id="blackPoints"></span></p>
+<p>Chrono-points: <span id="whitePoints"></span></p>
+</div>
+<div id="controls"><a href="#" onclick="changeTurn(-1)"><</a> <a href="#" onclick="changeTurn(1)">></a></div>
+</body>

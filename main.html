@@ -1,0 +1,22 @@
+<html>
+<head>
+<script type="text/javascript" src="chronoFunctions.js"></script>
+<script src="https://ajax.googleapis.com/ajax/libs/jquery/3.2.1/jquery.min.js"></script>
+<link rel="stylesheet" type="text/css" href="main.css">
+</head>
+
+<body onload="onLoad()">
+<div id="moves">
+<table id="moveTb">
+
+</table>
+</div>
+<div id="centre"></div>
+<div id="moveType">
+    <div id="moveAbs" class="moveTypeDiv" onclick="changeMoveType(0)">Absolute</div>
+    <div id="moveRel" class="moveTypeDiv" onclick="changeMoveType(1)">Relative</div>
+    <div id="commit" class="moveTypeDiv" onclick="commitMove()">Commit</div>
+    <div id="refresh" class="moveTypeDiv" onclick="getState()">Refresh</div>
+</div>
+</body>
+</html>

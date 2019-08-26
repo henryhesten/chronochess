@@ -1,0 +1,85 @@
+#chronoTop{
+	margin-bottom: 580px;
+}
+#right{
+	display:inline-block;
+	width:150px;
+	height:650px;
+	background: #eee;
+	vertical-align: top;
+}
+#moves{
+	height:650px;
+	//width:350px;
+	background: #eee;
+	display: inline-block;
+}
+#centre{
+	display: inline-block;
+}
+.square {
+	color:#000;
+	//display:block;
+	font-size:60px;
+	
+	height:80px;
+	position:relative;
+	text-decoration:none;
+	text-shadow:0 1px #fff;
+	width:80px;
+	
+	-moz-user-select: -moz-none;
+   -khtml-user-select: none;
+   -webkit-user-select: none;
+   -ms-user-select: none;
+   user-select: none;
+}
+#chess_board {
+	border:5px solid #333;
+	display: inline-block;
+}
+#chess_board td {
+	background:-webkit-gradient(linear,0 0, 0 100%, from(#fff), to(#eee));
+	box-shadow:inset 0 0 0 1px #fff;
+	-webkit-box-shadow:inset 0 0 0 1px #fff;
+	height:80px;
+	text-align:center;
+	vertical-align:middle;
+	width:80px;
+}
+#chess_board tr:nth-child(odd) td:nth-child(even),
+#chess_board tr:nth-child(even) td:nth-child(odd) {
+	background:-webkit-gradient(linear,0 0, 0 100%, from(#ccc), to(#eee));
+	box-shadow:inset 0 0 10px rgba(0,0,0,.4);
+	-webkit-box-shadow:inset 0 0 10px rgba(0,0,0,.4);
+}
+.moveTypeDiv {
+    height:50px;
+    width:200px;
+    vertical-align: middle;
+    text-align:center;
+}
+#moveType{
+    display: inline-block;
+    vertical-align:top;
+}
+#commit{
+    background: #ffccaa
+}
+#refresh{
+    background: #cccccc
+}
+
+.movetd {
+    padding:5px;
+    padding-left:15px;
+    padding-right:15px;
+}
+.timeTd {
+    padding:5px;
+    padding-left:15px;
+    padding-right:15px;
+}
+.selectedTime {
+    background: #aaccff;
+}
