@@ -11,6 +11,9 @@ var stA = null;
 var st = null;
 var selectedTime = 0;
 var selectedPastMove = false;
+var toPlay = 0;
+var chrono_points = [0,0]
+var turn = 0;
 
 var absCol = "#aaddaa"
 var relCol = "#aaccff"
@@ -59,21 +62,36 @@ function selected(x,y){
     }
 
     selectedPastMove = null;
-    piece = brd[x][y]
-    if (selectedPiece==null && piece==null){
+    piece = brd[x][y];
+    var own_piece;
+    if (piece == null)
+    {
+        own_piece = false;
+    }
+    else
+    {
+        own_piece = toPlay == piece[0];
+    }
+
+    if (selectedPiece==null)
+    {
+        if (piece != null && own_piece)
+        {
+            selectedPiece = piece;
+        }
         selectedSquare=null;
-    }else if(selectedPiece==null && piece!=null){
-        selectedPiece = piece;
-    }else if(piece != null && selectedPiece[6]==piece[6]){
-        selectedPiece = null;
-        selectedSquare = null;
-    }else if(selectedSquare == null){
-        selectedSquare = [x,y]
-    }else if(selectedSquare[0] == x && selectedSquare[1] == y){
-        selectedSquare = null;
-    }else{
-        selectedSquare = null;
-        selectedPiece = null;
+    }
+    else
+    {
+        if (piece != null && own_piece)
+        {
+            selectedPiece = piece;
+            selectedSquare=null;
+        }
+        else
+        {
+            selectedSquare = [x,y];
+        }
     }
     console.log(selectedPiece)
     console.log(selectedSquare)
@@ -164,6 +182,10 @@ function drawState(st){
 function drawMoves()
 {
     inTab = "";
+    inTab += "<tr><td>CP:</td><td class='cp'>" + chrono_points[0] + "</td>"
+    inTab += formatTaken(null);
+    inTab += "<td class='cp'>" + chrono_points[1] + "</td>"
+    inTab += formatTaken(null);
     if (opA!=null)
     {
         for (var i=0; i<opA.length; i++)
@@ -172,16 +194,23 @@ function drawMoves()
             {
                 inTab += "<tr>" + drawTimeTd(i)
             }
-            inTab += formatMove(i,opA[i])
-            if (i%2==1 || i == opA.length-1)
+            inTab += formatMove(i,opA[i], takenIndA[i])
+            if (i%2==1 && i == opA.length-1)
             {
                 inTab += "</tr>"
             }
         }
 
-        for (var i=opA.length; i<opA.length+6; i+=2)
+        next = opA.length
+        if (next%2==1)
         {
-            inTab += "<tr>" + drawTimeTd(i) + formatMove(i,null) + formatMove(i+1,null)+ "</tr>";
+            inTab += formatMove(next,null,-1)+ "</tr>";
+            next += 1
+        }
+
+        for (var i=next; i<opA.length+6; i+=2)
+        {
+            inTab += "<tr>" + drawTimeTd(i) + formatMove(i,null,-1) + formatMove(i+1,null,-1)+ "</tr>";
         }
     }
     document.getElementById("moveTb").innerHTML = inTab
@@ -191,7 +220,7 @@ function drawTimeTd(i)
     var row = i/2;
     return "<td class='timeTd' onclick=timeTdClicked("+row+")>"+row+"</td>";
 }
-function formatMove(i,moveA)
+function formatMove(i,moveA, takenInd)
 {
     var moveStr;
     if (moveA==null)
@@ -218,8 +247,36 @@ function formatMove(i,moveA)
     {
         ret += " selectedTime";
     }
-    ret += "' onclick='moveClicked("+i+")'>"+moveStr+"</td>"
+    if (i == turn)
+    {
+        ret += " currentTurn";
+    }
+    ret += "' onclick='moveClicked("+i+")'>"+moveStr+"</td>";
+
+    if (takenInd != -1)
+    {
+        takenP = st[takenInd];
+        ret += formatTaken(takenP[1]);
+    }
+    else
+    {
+        ret += formatTaken(null);
+    }
     return ret
+}
+function formatTaken(takenStr)
+{
+    ret = ""
+    if (takenStr == null)
+    {
+        ret += "<td class='taken'></td>";
+    }
+    else
+    {
+        ret += "<td class='taken taken_"+takenStr+"'>" + takenStr + "</td>"
+    }
+    ret += "<td class='td_spacer'></td>";
+    return ret;
 }
 function drawMoveType(){
     boldA = ["normal","bold"];
@@ -266,11 +323,7 @@ function getState(){
 				dic = tmpDic;
 			}
 			console.log(tmpDic)
-			stA = dic["stA"];
-			st = stA[ stA.length-1 ];
-			brd = dic["brdA"][dic["brdA"].length-1];
-			brdA = dic["brdA"];
-			opA = dic["opA"];
+			update_from_dict(dic)
 			drawAll();
 		}
 		pause = false
@@ -308,7 +361,7 @@ function commitMove(){
         return;
     }
     
-    if(selectedTime%2 != opA.length%2)
+    if(selectedTime%2 != toPlay)
     {
         alert("Attempting to move the wrong colour!");
         return;
@@ -325,26 +378,39 @@ function commitMove(){
         toX = selectedSquare[0] - selectedPiece[3]
         toY = selectedSquare[1] - selectedPiece[4]
     }
-    commit = selectedTime+","+selectedPiece[6]+","+moveType+","+toX+","+toY
+    commit = selectedTime+","+selectedPiece[5]+","+moveType+","+toX+","+toY
     
     var xhttp = new XMLHttpRequest();
         xhttp.onreadystatechange = function() {
         if (this.readyState == 4 && this.status == 200) {
-    			console.log("str",this.responseText)
+    			console.log("return str",this.responseText)
     			var tmpDic = JSON.parse( this.responseText );
     			if( tmpDic["tim"]>dic["tim"] ){
                 dic = tmpDic;
     			}
     			console.log(tmpDic)
-    			stA = dic["stA"];
-    			st = stA[ stA.length-1 ];
-    			brd = dic["brdA"][dic["brdA"].length-1];
-    			brdA = dic["brdA"];
+    			update_from_dict(dic);
     			drawAll();
         }
         pause = false
     };
-    xhttp.open("GET", "move", true);
+    xhttp.open("GET", "move?"+commit, true);
     xhttp.send();
     pause = true
+}
+
+function update_from_dict(dic)
+{
+    stA = dic["stA"];
+    st = stA[ stA.length-1 ];
+    brd = dic["brdA"][dic["brdA"].length-1];
+    brdA = dic["brdA"];
+    opA = dic["opA"];
+    toPlay = dic["toPlay"];
+    chrono_points = dic["chrono_points"]
+    turn = dic["turn"];
+    takenIndA = dic["takenIndA"]
+    selectedTime = turn;
+    selectedPiece = null;
+    selectedSquare = null;
 }

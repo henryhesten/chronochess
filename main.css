@@ -58,6 +58,7 @@
     width:200px;
     vertical-align: middle;
     text-align:center;
+    font-size:25;
 }
 #moveType{
     display: inline-block;
@@ -82,4 +83,37 @@
 }
 .selectedTime {
     background: #aaccff;
+}
+.currentTurn {
+    border-style: solid;
+}
+.taken {
+    width:20px;
+    text-align: center;
+    margin-right:15px;
+    margin-left:-15px;
+}
+.td_spacer {
+    width:10px;
+}
+.taken_p {
+    background: #ffccaa;
+}
+.taken_n {
+    background: #ffaa88;
+}
+.taken_b {
+    background: #ffaa88;
+}
+.taken_r {
+    background: #ff8866;
+}
+.taken_q {
+    background: #ff7755;
+}
+.taken_k {
+    background: #ff5533;
+}
+.cp {
+    text-align: center;
 }

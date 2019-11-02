@@ -4,27 +4,24 @@ Created on Fri Apr 28 15:42:03 2017
 
 @author: fredh
 """
+import os
+import time
 
-import numpy
-from numpy import *
-from myCommon import *
+import numpy as np
+import my_common as mc
 import copy
-
-
-commonPath = "d:/hesten-bec/code_/models/"
+from http.server import BaseHTTPRequestHandler, HTTPServer
+import json
 import sys
 
-sys.path.insert(0, commonPath)
+pathh = "D:/programming/chronochess-pycharm/"
 
 
-pathh = "D:/programming/chronochess/"
-
-
-def samplePiece():
+def sample_piece():
     return [0, "k", 1, 3, 4, 10]  # white, king, alive, x=3, y=4, index in st = 10
 
 
-def startSt():
+def start_state():
     ret = [
         [0, "r", 1, 0, 0],
         [0, "n", 1, 1, 0],
@@ -64,11 +61,11 @@ def startSt():
     return ret
 
 
-def sampleOp():
+def sample_operation():
     return [0, 1, 3, 4]  # piece index = 0,  abs/rel move, to/by x = 3, to/by y=4
 
 
-def sampleMoves():
+def sample_moves():
     return [
         [12, 0, 4, 3],
         [28, 0, 4, 4],
@@ -85,7 +82,7 @@ def sampleMoves():
     ]
 
 
-def sampleMetaOpA():
+def sample_meta_operation_array():
     return [
         [0, [12, 0, 4, 3]],
         [1, [28, 0, 4, 4]],
@@ -94,10 +91,10 @@ def sampleMetaOpA():
     ]
 
 
-def st2Board(st):
-    if len(shape(st)) > 2:
-        return list(map(st2Board, st))
-    brd = noneFromShape((8, 8))
+def board_from_state(st):
+    if len(np.shape(st)) > 2:
+        return list(map(board_from_state, st))
+    brd = mc.noneFromShape((8, 8))
     for i, pc in enumerate(st):
         if pc[2] == 1:
             brd[pc[3]][pc[4]] = pc
@@ -105,7 +102,7 @@ def st2Board(st):
     return brd
 
 
-def pc2Str(pc):
+def piece_to_string(pc):
     if pc == None:
         return "--"
     strr = ""
@@ -117,41 +114,42 @@ def pc2Str(pc):
     return strr
 
 
-def printBoard(board):
-    for ln in transpose(board)[::-1]:
-        strr = " ".join(map(pc2Str, ln))
+def print_board(board):
+    for ln in np.transpose(board)[::-1]:
+        strr = " ".join(map(piece_to_string, ln))
         print(strr)
 
 
-def printSt(st):
-    printBoard(st2Board(st))
+def print_state(st):
+    print_board(board_from_state(st))
 
 
 ## returns [bool, nst]
 ## bool is whether the operation results in a state change
 ## nst is the new state after the move (or the same state is move not allowed)
 def operate(st, op):
+    takenPiece = -1
     if op == None:
-        return [False, st]
+        return [False, st, takenPiece]
 
     st = copy.deepcopy(st)
-    brd = np.array(st2Board(st))
+    brd = np.array(board_from_state(st))
     ind = op[0]
     pc = st[ind]
     if pc[2] == 0:  ## dead
-        return [False, st]
+        return [False, st, takenPiece]
 
-    pos0 = array([pc[3], pc[4]])
+    pos0 = np.array([pc[3], pc[4]])
 
     if op[1] == 0:
-        pos1 = array([op[2], op[3]])
+        pos1 = np.array([op[2], op[3]])
     else:
         pos1 = pos0 + [op[2], op[3]]
 
     dpos = pos1 - pos0
 
     if dpos[0] == 0 and dpos[1] == 0:
-        return [False, st]
+        return [False, st, takenPiece]
 
     orth = False
     diag = False
@@ -161,28 +159,33 @@ def operate(st, op):
         diag = True
 
     if (not orth) and (not diag) and (pc[1] != "n"):
-        return [False, st]
+        return [False, st, takenPiece]
+    if orth and (pc[1] == "b"):
+        return [False, st, takenPiece] ## bishops move diagonally
+    if diag and (pc[1] == "r"):
+        return [False, st, takenPiece] ## rocks move orthogonally
 
     if pc[1] == "p":
         sgn = -pc[0] * 2 + 1
         if dpos[1] * sgn <= 0:  ## cannot move backwards
-            return [False, st]
+            return [False, st, takenPiece]
         if dpos[0] == 0:  ## move forwards
             if abs(dpos[1]) > 1:
                 if (pos0[1] - 3.5) * sgn == -2.5:  ## initial move
                     dpos[1] = 2 * sgn
                 else:
                     dpos[1] = 1 * sgn
-            endPos = moveTo(brd, pos0, dpos, pc[0], False)[0]
+            endPos = move_to(brd, pos0, dpos, pc[0], False)[0]
         else:  ## take
-            endPos = pos0 + sign(dpos)
+            endPos = pos0 + np.sign(dpos)
             pc2 = brd[tuple(endPos)]
             if pc2 == None:  ## cannot take nothing
-                return [False, st]
+                return [False, st, takenPiece]
             if pc2[0] == pc[0]:  ## cannot take same colour
-                return [False, st]
+                return [False, st, takenPiece]
             else:
                 st[pc2[5]][2] = 0  ## kill taken peice
+                takenPiece = pc2[5]
         st[ind][3:5] = endPos
 
     elif pc[1] == "n":
@@ -194,37 +197,39 @@ def operate(st, op):
             if abs(dp) == 1 and not mov1:
                 mov1 = True
         if (not mov2) or (not mov1):  ## not knight move
-            return [False, st]
+            return [False, st, takenPiece]
         endPos = pos0 + dpos
-        if not onBoard(endPos):  ## move off board
-            return [False, st]
+        if not on_board(endPos):  ## move off board
+            return [False, st, takenPiece]
         pc2 = brd[tuple(endPos)]
         if pc2 != None:
             if pc2[0] == pc[0]:  ## cannot take same colour
-                return [False, st]
+                return [False, st, takenPiece]
             else:
                 st[pc2[5]][2] = 0  ## kill taken peice
+                takenPiece = pc2[5]
         st[ind][3:5] = endPos
 
     if pc[1] == "k":
-        dpos = sign(dpos)  ## kings only move 1
+        dpos = np.sign(dpos)  ## kings only move 1
     if pc[1] in ["k", "b", "r", "q"]:
-        out = moveTo(brd, pos0, dpos, pc[0], True)
+        out = move_to(brd, pos0, dpos, pc[0], True)
         if out[1] != None:
             st[out[1]][2] = 0  ## kill taken piece
+            takenPiece = out[1]
         st[ind][3:5] = out[0]
 
-    return [True, st]
+    return [True, st, takenPiece]
 
 
-def moveTo(brd, pos0, dpos, col, allowTake=True):  # assumes either diag or orth
+def move_to(brd, pos0, dpos, col, allowTake=True):  # assumes either diag or orth
     lenn = max(abs(dpos))
-    ddpos = sign(dpos)
+    ddpos = np.sign(dpos)
     mi = 0
     takenInd = None
-    for i in arange(lenn) + 1:
+    for i in np.arange(lenn) + 1:
         tmpPos = pos0 + i * ddpos
-        if not onBoard(tmpPos):
+        if not on_board(tmpPos):
             break
         pc2 = brd[tuple(tmpPos)]
         if pc2 == None:
@@ -239,14 +244,15 @@ def moveTo(brd, pos0, dpos, col, allowTake=True):  # assumes either diag or orth
     return [endPos, takenInd]
 
 
-def onBoard(pos):  ## returns true if 0 <= x,y < 8
+def on_board(pos):  ## returns true if 0 <= x,y < 8
     for p in pos:
         if p < 0 or p >= 8:
             return False
     return True
 
 
-def propagateOps(opA, st=startSt()):
+def propagate_operations(opA, st=start_state()):
+    takenIndA = []
     stA = [st]
     for i, op in enumerate(opA):
         if op == None:
@@ -259,12 +265,13 @@ def propagateOps(opA, st=startSt()):
 
         out = operate(stA[-1], op)
         stA.append(out[1])
-    return stA
+        takenIndA.append(out[2])
+    return stA,takenIndA
 
 
-def opAFromMetaOpA(metaOpA):
+def operation_array_from_meta_array(metaOpA):
     opA = []
-    sst = startSt()
+    sst = start_state()
     for mop in metaOpA:
         ind = mop[0]
         op = mop[1]
@@ -278,29 +285,26 @@ def opAFromMetaOpA(metaOpA):
     return opA
 
 
-def jsonifyTypes(obj):
-    if isDict(obj):
+def jsonify_types(obj):
+    if mc.isDict(obj):
         dic = {}
         for k in obj.keys():
-            dic[k] = jsonifyTypes(obj[k])
+            dic[k] = jsonify_types(obj[k])
         return dic
-    elif isListOrArray(obj):
-        return list(map(jsonifyTypes, obj))
-    elif isinstance(obj, numpy.int32):
+    elif mc.isListOrArray(obj):
+        return list(map(jsonify_types, obj))
+    elif isinstance(obj, np.int32):
         return int(obj)
     else:
         return obj
 
 
-# %%
-from http.server import BaseHTTPRequestHandler, HTTPServer
-import json
-
-
 # HTTPRequestHandler class
 class testHTTPServer_RequestHandler(BaseHTTPRequestHandler):
-    metaOpA = sampleMetaOpA()
-    startState = startSt()
+    metaOpA = [] #sample_meta_operation_array()
+    startState = start_state()
+    chrono_points = [0, 0]
+    turnA = [0] ## integers are overwritten to 0 for some reason
 
     def do_GET(self):
         # print(dir(self))
@@ -313,58 +317,89 @@ class testHTTPServer_RequestHandler(BaseHTTPRequestHandler):
 
         print("GET path: {}".format(self.path))
         splt = self.path.split("?")
-        if len(splt) > 1:
-            preQu = splt[0]
-            postQu = splt[1]
-        else:
-            preQu = splt[0]
-            postQu = None
 
-        if self.path == "/":
-            with open(pathh + "main.html") as f:
-                message = f.read()
+        try:
+            if len(splt) > 1:
+                preQu = splt[0]
+                postQu = splt[1]
+            else:
+                preQu = splt[0]
+                postQu = None
 
-        elif self.path == "/state":
-            message = self.getStandardReturn()
+            if self.path == "/":
+                with open(pathh + "main.html") as f:
+                    message = f.read()
 
-        elif preQu == "/move":
-            if postQu is None:
-                raise ValueError("Move endpoint requires query parameters")
-            moveA = [int(query_param) for query_param in postQu.split(",")]  # time, index, abs/rel, to/by
-            if len(moveA) != 5:
-                raise Exception("MoveA must equal 5")
-            col = self.startState[moveA[1]][0]
-            if col != len(self.metaOpA) % 2:
-                raise Exception("Moving the wrong colour")
-            new_meta_op = [moveA[0], moveA[1:]]
-            self.metaOpA.append(new_meta_op)
-            message = self.getStandardReturn()
+            elif self.path == "/state":
+                message = self.get_standard_return()
 
-        else:
-            try:
-                f = open(pathh + self.path)
-                message = f.read()
-            except:
-                print("ERROR")
-                message = "ERROR"
+            elif preQu == "/move":
+                if postQu is None:
+                    raise ValueError("Move endpoint requires query parameters")
+                move = [int(query_param) for query_param in postQu.split(",")]  # time, index, abs/rel, to/by
+                out = self.do_move(move)
+                if out == "success":
+                    message = self.get_standard_return()
+                else:
+                    message = "move not permitted: " + out
 
-        # print(message)
-        self.wfile.write(bytes(message, "utf8"))
-        return
+            else:
+                try:
+                    f = open(pathh + self.path)
+                    message = f.read()
+                except Exception as e:
+                    print("ERROR")
+                    message = "{ERROR:" + str(e) + "}"
 
-    def getStandardReturn(self):
-        opA = opAFromMetaOpA(self.metaOpA)
-        stA = propagateOps(opA)
-        brdA = st2Board(stA)
-        toPlay = len(self.metaOpA) % 2
+            # print(message)
+            self.wfile.write(bytes(message, "utf8"))
+            return
+
+        except Exception as e:
+            mc.print_exception()
+            self.wfile.write(bytes("{'ERROR':'ERROR'}", "utf8"))
+
+    def get_standard_return(self):
+        opA = operation_array_from_meta_array(self.metaOpA)
+        stA, takenIndA = propagate_operations(opA)
+        brdA = board_from_state(stA)
+        toPlay = self.current_player()
         opA2 = copy.deepcopy(opA)
         for i, el in enumerate(opA2):
             if el == None:
                 opA2[i] = "none"
-        return json.dumps(jsonifyTypes(
+        return json.dumps(jsonify_types(
             {"metaOpA": self.metaOpA, "stA": stA, "opA": opA, "brdA": brdA,
-             "tim": time.time(), "toPlay": toPlay}))
+             "tim": time.time(), "toPlay": toPlay, "chrono_points": self.chrono_points,
+             "turn": self.get_turn(), "takenIndA": takenIndA}))
 
+    def do_move(self, move):
+        if len(move) != 5:
+            return "Move array must have length 5"
+        col = self.startState[move[1]][0]
+        player = self.current_player()
+        if col != player:
+            return "Moving the wrong colour"
+
+        current_chrono_points = self.chrono_points[player]
+        spending_chrono_points = (self.get_turn() - move[0]) / 2
+        if spending_chrono_points < 0:
+            spending_chrono_points = 0
+        if current_chrono_points < spending_chrono_points:
+            return f"Insufficent chronopoints {current_chrono_points} < ({self.get_turn()} - {move[0]})/2"
+
+        new_meta_op = [move[0], move[1:]]
+        self.metaOpA.append(new_meta_op)
+        self.chrono_points[player] -= spending_chrono_points
+        self.chrono_points[1-player] += 1
+        self.turnA[0] = self.turnA[0] + 1
+        return "success"
+
+    def current_player(self):
+        return len(self.metaOpA) % 2
+
+    def get_turn(self):
+        return self.turnA[0]
 
 try:
     print('starting server...')
@@ -372,6 +407,11 @@ try:
     httpd = HTTPServer(server_address, testHTTPServer_RequestHandler)
     print('running server...')
     httpd.serve_forever()
-except  KeyboardInterrupt:
+except KeyboardInterrupt:
     print('^C received, shutting down the web server')
     httpd.server_close()
+
+
+class ChessException(Exception):
+    def __init__(self, message):
+        self.message = message
