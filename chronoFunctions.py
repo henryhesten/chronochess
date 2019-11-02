@@ -14,7 +14,7 @@ from http.server import BaseHTTPRequestHandler, HTTPServer
 import json
 import sys
 
-pathh = "D:/programming/chronochess-pycharm/"
+pathh = "D:/programming/chronochess/"
 
 
 def sample_piece():
