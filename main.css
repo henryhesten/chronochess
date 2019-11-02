@@ -81,7 +81,10 @@
     padding-left:15px;
     padding-right:15px;
 }
-.selectedTime {
+.selectedTime1 {
+    background: #aaccff;
+}
+.selectedTime0 {
     background: #aaccff;
 }
 .currentTurn {

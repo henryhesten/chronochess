@@ -99,10 +99,6 @@ function selected(x,y){
     drawSquareColours();
 }
 
-function currentPlayer()
-{
-    return opA.length%2;
-}
 function moveClicked(i)
 {
     changeTime(i);
@@ -139,7 +135,7 @@ function moveClicked(i)
 }
 function timeTdClicked(i)
 {
-    changeTime(i*2 + currentPlayer());
+    changeTime(i*2 + toPlay);
     if (selectedPastMove)
     {
          selectedSquare = null;
@@ -214,6 +210,19 @@ function drawMoves()
         }
     }
     document.getElementById("moveTb").innerHTML = inTab
+
+    elA = document.getElementsByClassName("selectedTime")
+    if (elA.length>0)
+    {
+        if (moveType==0)
+        {
+            elA[0].style.background = absCol;
+        }
+        else
+        {
+            elA[0].style.background = relCol;
+        }
+    }
 }
 function drawTimeTd(i)
 {
@@ -256,6 +265,7 @@ function formatMove(i,moveA, takenInd)
     if (takenInd != -1)
     {
         takenP = st[takenInd];
+        console.log("taken",takenInd,takenP)
         ret += formatTaken(takenP[1]);
     }
     else
@@ -348,7 +358,8 @@ function changeMoveType(to){
     }
     moveType = to;
     drawMoveType();
-    drawSquareColours()
+    drawSquareColours();
+    drawMoves();
 }
 
 function commitMove(){

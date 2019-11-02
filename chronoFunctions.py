@@ -257,6 +257,7 @@ def propagate_operations(opA, st=start_state()):
     for i, op in enumerate(opA):
         if op == None:
             stA.append(stA[-1])
+            takenIndA.append(-1)
             continue
 
         col = st[op[0]][0]

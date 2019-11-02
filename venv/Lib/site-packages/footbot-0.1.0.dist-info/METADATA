@@ -1,0 +1,66 @@
+Metadata-Version: 2.1
+Name: footbot
+Version: 0.1.0
+Summary: Picks good teams for the UK FPL Fantasy Football game
+Home-page: https://github.com/rach-sharp/fantasy-footbot
+Author: Rachel Sharp
+Author-email: rachelsharp.dev@gmail.com
+License: MIT License
+Keywords: football
+Platform: UNKNOWN
+Description-Content-Type: text/markdown
+Requires-Dist: clint
+Requires-Dist: requests
+Requires-Dist: pulp
+
+### Fantasy Footbot :soccer: :trophy:
+
+Win Fantasy Premier League! Spend your dirty football manager money cost-effectively! Do linear maths!
+For people who can't pick football players good and want to learn to do other football manager stuff good too
+
+Install with `pip install footbot`
+
+Usage:
+
+~~~
+footbot scout
+footbot --help
+footbot scout -rf ppg # use the points per game ranking function, for example
+footbot scout -bf lp_max # use the lp_max building function, for example
+~~~
+
+Example Output, Week 2 2018
+
+~~~
+(fantasy-footbot-gomZnCJG) rach@nbn:~/Repos/fantasy-footbot$ footbot scout
+Loading Player Data: [################################] 527/527 - 00:00:42
+Total Cost: 99.5, Points: 198
+Players
+ 1. David Silva                           8.4 mil,   9 points  Man City midfielder
+ 2. Paul Pogba                            8.1 mil,  18 points  Man Utd midfielder
+ 3. Roberto Pereyra                       6.1 mil,  18 points  Watford midfielder
+ 4. Sadio Mané                            9.7 mil,  17 points  Liverpool midfielder
+ 5. Ricardo Domingos Barbosa Pereira      5.0 mil,  16 points  Leicester defender
+ 6. Callum Wilson                         6.1 mil,  14 points  Bournemouth forward
+ 7. Troy Deeney                           6.0 mil,  14 points  Watford forward
+ 8. Alex McCarthy                         4.5 mil,  13 points  Southampton goalkeeper
+ 9. Marcos Alonso                         6.6 mil,  24 points  Chelsea defender
+10. Richarlison de Andrade                6.7 mil,  23 points  Everton midfielder
+11. Benjamin Mendy                        6.2 mil,  23 points  Man City defender
+12. Neil Etheridge                        4.5 mil,  22 points  Cardiff goalkeeper
+13. Sergio Agüero                        11.1 mil,  22 points  Man City forward
+14. Kieran Trippier                       6.0 mil,  11 points  Spurs defender
+15. Steve Cook                            4.5 mil,  20 points  Bournemouth defender
+~~~
+
+
+Done. Enjoy your free fantasy football points.
+
+This is extensible with custom ranking and team-building algorithms.
+
+#### To-Do List
+
+* Need to make sure it picks a good captain for your team, since they're worth twice as much.
+* Need to make it care less about the value of players on the bench
+* Need to implement week-to-week factors such as home/away, strength of opposing team, and have a mode which scouts good transfers rather than for building a team
+

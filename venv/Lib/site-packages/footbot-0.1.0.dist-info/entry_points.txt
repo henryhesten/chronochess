@@ -1,0 +1,3 @@
+[console_scripts]
+footbot = fantasy_footbot.cli_functions:cli_main
+
