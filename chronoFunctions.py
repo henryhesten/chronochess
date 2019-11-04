@@ -6,6 +6,7 @@ Created on Fri Apr 28 15:42:03 2017
 """
 import os
 import time
+from typing import List, Optional
 
 import numpy as np
 import my_common as mc
@@ -18,7 +19,7 @@ pathh = "D:/programming/chronochess/"
 
 
 def sample_piece():
-    return [0, "k", 1, 3, 4, 10]  # white, king, alive, x=3, y=4, index in st = 10
+    return [0, "k", 1, 3, 4, 10, 1]  # white, king, alive, x=3, y=4, index in st = 10, has_moved
 
 
 def start_state():
@@ -57,7 +58,7 @@ def start_state():
         [1, "p", 1, 7, 6]
     ]
     for i in range(len(ret)):
-        ret[i].append(i)
+        ret[i] += [i, 0]
     return ret
 
 
@@ -77,7 +78,7 @@ def sample_moves():
         [21, 1, -10, -10],
         [4, 1, 0, 10],
         [19, 0, 6, 4],
-        [12, 1, 0, 1],
+        [12, 1, 0, 1, 0],
         [19, 0, 0, 4]
     ]
 
@@ -127,17 +128,19 @@ def print_state(st):
 ## returns [bool, nst]
 ## bool is whether the operation results in a state change
 ## nst is the new state after the move (or the same state is move not allowed)
-def operate(st, op):
-    takenPiece = -1
-    if op == None:
-        return [False, st, takenPiece]
+def operate(stA, op):
+    st = stA[-1]
+
+    taken_piece = -1
+    if op is None:
+        return [False, st, taken_piece]
 
     st = copy.deepcopy(st)
     brd = np.array(board_from_state(st))
     ind = op[0]
     pc = st[ind]
     if pc[2] == 0:  ## dead
-        return [False, st, takenPiece]
+        return [False, st, taken_piece]
 
     pos0 = np.array([pc[3], pc[4]])
 
@@ -149,7 +152,7 @@ def operate(st, op):
     dpos = pos1 - pos0
 
     if dpos[0] == 0 and dpos[1] == 0:
-        return [False, st, takenPiece]
+        return [False, st, taken_piece]
 
     orth = False
     diag = False
@@ -159,34 +162,46 @@ def operate(st, op):
         diag = True
 
     if (not orth) and (not diag) and (pc[1] != "n"):
-        return [False, st, takenPiece]
+        return [False, st, taken_piece]
     if orth and (pc[1] == "b"):
-        return [False, st, takenPiece] ## bishops move diagonally
+        return [False, st, taken_piece]  # bishops move diagonally
     if diag and (pc[1] == "r"):
-        return [False, st, takenPiece] ## rocks move orthogonally
+        return [False, st, taken_piece]  # rocks move orthogonally
 
     if pc[1] == "p":
         sgn = -pc[0] * 2 + 1
-        if dpos[1] * sgn <= 0:  ## cannot move backwards
-            return [False, st, takenPiece]
-        if dpos[0] == 0:  ## move forwards
+        if dpos[1] * sgn <= 0:  # cannot move backwards
+            return [False, st, taken_piece]
+        if dpos[0] == 0:  # move forwards
             if abs(dpos[1]) > 1:
-                if (pos0[1] - 3.5) * sgn == -2.5:  ## initial move
+                if (pos0[1] - 3.5) * sgn == -2.5:  # initial move
                     dpos[1] = 2 * sgn
                 else:
                     dpos[1] = 1 * sgn
-            endPos = move_to(brd, pos0, dpos, pc[0], False)[0]
-        else:  ## take
-            endPos = pos0 + np.sign(dpos)
-            pc2 = brd[tuple(endPos)]
-            if pc2 == None:  ## cannot take nothing
-                return [False, st, takenPiece]
-            if pc2[0] == pc[0]:  ## cannot take same colour
-                return [False, st, takenPiece]
-            else:
-                st[pc2[5]][2] = 0  ## kill taken peice
-                takenPiece = pc2[5]
-        st[ind][3:5] = endPos
+            end_pos = move_to(brd, pos0, dpos, pc[0], False)[0]
+        else:  # take
+            end_pos = pos0 + np.sign(dpos)
+            pc2 = brd[tuple(end_pos)]
+            taken_piece = en_passant(stA, pc, brd, dpos)
+            if taken_piece is None:
+                '''
+                if pc2[0] == pc[0]:  # cannot take same colour
+                    return [False, st, taken_piece]
+                if pc2 is not None:
+                    st[pc2[5]][2] = 0  # kill taken peice
+                    taken_piece = pc2[5]
+                else:  # cannot take nothing
+                    return [False, st, taken_piece]'''
+
+                if pc2 == None:  ## cannot take nothing
+                    return [False, st, taken_piece]
+                if pc2[0] == pc[0]:  ## cannot take same colour
+                    return [False, st, taken_piece]
+                else:
+                    st[pc2[5]][2] = 0  ## kill taken peice
+                    taken_piece = pc2[5]
+
+        st[ind][3:5] = end_pos
 
     elif pc[1] == "n":
         mov2 = False
@@ -196,30 +211,114 @@ def operate(st, op):
                 mov2 = True
             if abs(dp) == 1 and not mov1:
                 mov1 = True
-        if (not mov2) or (not mov1):  ## not knight move
-            return [False, st, takenPiece]
-        endPos = pos0 + dpos
-        if not on_board(endPos):  ## move off board
-            return [False, st, takenPiece]
-        pc2 = brd[tuple(endPos)]
+        if (not mov2) or (not mov1):  # not knight move
+            return [False, st, taken_piece]
+        end_pos = pos0 + dpos
+        if not on_board(end_pos):  # move off board
+            return [False, st, taken_piece]
+        pc2 = brd[tuple(end_pos)]
         if pc2 != None:
-            if pc2[0] == pc[0]:  ## cannot take same colour
-                return [False, st, takenPiece]
+            if pc2[0] == pc[0]:  # cannot take same colour
+                return [False, st, taken_piece]
             else:
-                st[pc2[5]][2] = 0  ## kill taken peice
-                takenPiece = pc2[5]
-        st[ind][3:5] = endPos
+                st[pc2[5]][2] = 0  # kill taken peice
+                taken_piece = pc2[5]
+        st[ind][3:5] = end_pos
 
+    castled = False
     if pc[1] == "k":
-        dpos = np.sign(dpos)  ## kings only move 1
-    if pc[1] in ["k", "b", "r", "q"]:
+        castled = castle(st, dpos, pc, brd)
+
+    if pc[1] == "k" and not castled:
+        dpos = np.sign(dpos)  # kings only move 1
+    if pc[1] in ["k", "b", "r", "q"] and not castled:
         out = move_to(brd, pos0, dpos, pc[0], True)
-        if out[1] != None:
-            st[out[1]][2] = 0  ## kill taken piece
-            takenPiece = out[1]
+        if out[1] is not None:
+            st[out[1]][2] = 0  # kill taken piece
+            taken_piece = out[1]
         st[ind][3:5] = out[0]
 
-    return [True, st, takenPiece]
+    pc[6] = 1  # moved piece
+
+    return [True, st, taken_piece]
+
+
+def castle(st, dpos, pc, brd):
+    if dpos[1] != 0:
+        return False
+    dx = dpos[0]
+    sx = np.sign(dx)
+    if abs(dx) > 2:
+        dx = 2 * sx
+    if abs(dx) < 2:
+        return False
+    col = pc[0]
+    rank = col * 7
+
+    rook = None
+    for pc2 in st:
+        if pc2[0] != col or pc2[1] != "r":
+            continue
+        if pc2[2] != 1:  # dead
+            continue
+        if pc2[4] != rank:  # not on correct rank
+            continue
+        if pc2[3] != (sx + 1) * 3.5:  # not on correct file
+            continue
+        rook = pc2
+    if rook == None:
+        return
+
+    for pp in [pc, rook]:
+        if pp[6] == 1:  # has already moved
+            return False
+
+    for i in [1, 2]:  # check squares moving to
+        tx = pc[3] + i * sx
+        tp = brd[tx][rank]
+        if tp is None:
+            return False
+
+    rook[3] = pc[3] + sx
+    pc[3] += sx * 2
+    rook[6] = 1
+    pc[6] = 1
+    return True
+
+
+#
+def en_passant(state_timeline, piece, board: List[List[Optional[List]]], change_in_position: List[int]):
+    """
+
+    :param state_timeline:
+    :param piece:
+    :param board:
+    :param change_in_position:
+    :return:
+    """
+
+    change_in_position = np.sign(change_in_position)
+
+    enemy_x = piece[3] + change_in_position[0]
+    enemy_y = piece[4]
+    enemy = board[enemy_x][enemy_y]
+    if enemy is None or enemy[1] != "p" \
+            or enemy[2] != 1 \
+            or enemy[0] == piece[0]:  # same colour
+        return None
+
+    i = enemy[5]
+    if len(state_timeline) < 2:
+        return None
+    prevSt = state_timeline[-2]
+    prevE = prevSt[i]
+    if abs(prevE[4] - enemy[4]) != 2:  # enemy must have just moved 2 squares
+        return None
+    if abs(prevE[3] - enemy[3]) != 0:  # enemy can't have taken
+        return None
+
+    enemy[2] = 0  # kill piece
+    return enemy[5]
 
 
 def move_to(brd, pos0, dpos, col, allowTake=True):  # assumes either diag or orth
@@ -264,10 +363,10 @@ def propagate_operations(opA, st=start_state()):
         if col != i % 2:
             raise Exception("Moved wrong colour!")
 
-        out = operate(stA[-1], op)
+        out = operate(stA, op)
         stA.append(out[1])
         takenIndA.append(out[2])
-    return stA,takenIndA
+    return stA, takenIndA
 
 
 def operation_array_from_meta_array(metaOpA):
@@ -302,10 +401,10 @@ def jsonify_types(obj):
 
 # HTTPRequestHandler class
 class testHTTPServer_RequestHandler(BaseHTTPRequestHandler):
-    metaOpA = [] #sample_meta_operation_array()
+    metaOpA = []  # sample_meta_operation_array()
     startState = start_state()
     chrono_points = [0, 0]
-    turnA = [0] ## integers are overwritten to 0 for some reason
+    turnA = [0]  ## integers are overwritten to 0 for some reason
 
     def do_GET(self):
         # print(dir(self))
@@ -349,8 +448,11 @@ class testHTTPServer_RequestHandler(BaseHTTPRequestHandler):
                     f = open(pathh + self.path)
                     message = f.read()
                 except Exception as e:
+                    mc.print_exception()
                     print("ERROR")
+                    #print(str(e))
                     message = "{ERROR:" + str(e) + "}"
+                    raise
 
             # print(message)
             self.wfile.write(bytes(message, "utf8"))
@@ -359,6 +461,7 @@ class testHTTPServer_RequestHandler(BaseHTTPRequestHandler):
         except Exception as e:
             mc.print_exception()
             self.wfile.write(bytes("{'ERROR':'ERROR'}", "utf8"))
+            raise
 
     def get_standard_return(self):
         opA = operation_array_from_meta_array(self.metaOpA)
@@ -392,7 +495,7 @@ class testHTTPServer_RequestHandler(BaseHTTPRequestHandler):
         new_meta_op = [move[0], move[1:]]
         self.metaOpA.append(new_meta_op)
         self.chrono_points[player] -= spending_chrono_points
-        self.chrono_points[1-player] += 1
+        self.chrono_points[1 - player] += 1
         self.turnA[0] = self.turnA[0] + 1
         return "success"
 
@@ -401,6 +504,7 @@ class testHTTPServer_RequestHandler(BaseHTTPRequestHandler):
 
     def get_turn(self):
         return self.turnA[0]
+
 
 try:
     print('starting server...')
