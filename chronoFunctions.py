@@ -276,7 +276,7 @@ def castle(st, dpos, pc, brd):
     for i in [1, 2]:  # check squares moving to
         tx = pc[3] + i * sx
         tp = brd[tx][rank]
-        if tp is None:
+        if tp is not None:
             return False
 
     rook[3] = pc[3] + sx
